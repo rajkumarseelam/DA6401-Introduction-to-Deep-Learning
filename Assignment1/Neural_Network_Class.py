@@ -1,14 +1,19 @@
+
+#This class contains all the functions for implementation the Feed Forward Neural network..
+
 import numpy as np
 
 class FeedforwardNeuralNetwork:
-    def __init__(self, input_nodes, hidden_nodes, output_nodes, hidden_layers, learning_rate, weight_init_type, activation):
+    def __init__(self, input_nodes, hidden_nodes, output_nodes, hidden_layers, learning_rate, weight_init_type, activation,loss_function_name, weight_decay):
         self.input_nodes = input_nodes
         self.hidden_nodes = hidden_nodes
         self.output_nodes = output_nodes
         self.hidden_layers = hidden_layers
         self.learning_rate = learning_rate
         self.activation = activation.lower()
+        self.loss_function_name = loss_function_name.lower()
         self.weight_init_type = weight_init_type.lower()
+        self.weight_decay = weight_decay
         
 
         # Initialize Weights
@@ -75,8 +80,10 @@ class FeedforwardNeuralNetwork:
         estimated_y[y_actual] = 1
         layer=self.hidden_layers
         # Gradient for Output Layer
-      
-        gradient_output_layer = -(estimated_y - y_predicted)
+        if self.loss_function_name == "mean_squared_error":
+            gradient_output_layer =np.matmul(self.grad_mse_loss(y_predicted, estimated_y), self.grad_softmax(y_predicted))
+        elif self.loss_function_name == "cross_entropy": 
+            gradient_output_layer = -(estimated_y - y_predicted)
 
         gradient_activation = gradient_output_layer
 
@@ -127,6 +134,27 @@ class FeedforwardNeuralNetwork:
     def predict(self, x):
         y_predicted, _, _ = self.forwardpropagation(x.reshape(1, -1))
         return np.argmax(y_predicted, axis=1)[0]
+    
+    def gradient_mse_loss(self, y_pred, y_actual):
+        return 2 * (y_pred - y_actual) / y_actual.shape[0]
+
+    def gradient_softmax(self, y_pred):
+        return y_pred * (1 - y_pred)
+
+    def gradient_weight_loss(self): #L2 Regularization
+        gradient_weight = [self.weight_decay*W for W in self.weights]
+        gradient_bias = [self.weight_decay*b for b in self.biases]
+        return gradient_weight, gradient_bias
+
+
+    def loss_function(self, y_predicted, y_actual):
+        estimated_y = np.zeros(self.output_nodes)
+        estimated_y[y_actual] = 1
+
+        if self.loss_function_name == "mean_squared_error":
+            return np.mean((y_predicted - estimated_y) ** 2)
+        elif self.loss_function_name == "cross_entropy":
+            return -np.log(y_predicted[0][y_actual])
 
 
     
