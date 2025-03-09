@@ -1,3 +1,9 @@
+
+# This class contains all the Optimizers given in the assignment
+# To Add any new optimization technique you can add the functionality in the class and also you can store the accuracy data in intiliazed lists which is more flexible..
+
+import numpy as np
+
 class Optimizers:
     def __init__(self, model):
         self.model = model
@@ -49,11 +55,6 @@ class Optimizers:
             self.train_losses.append(train_loss)
             self.val_accuracies.append(val_acc)
             self.val_losses.append(val_loss)
-
-        return self.model.weights, self.model.biases , self.train_accuracies, self.train_losses, self.val_accuracies, self.val_losses
-
-
-  
 
 
     def momentum_sgd(self, learning_rate, batch_size, epochs, momentum, Xtrain, Ytrain, Xval, Yval):
@@ -110,7 +111,6 @@ class Optimizers:
             self.val_accuracies.append(val_acc)
             self.val_losses.append(val_loss)
 
-        return self.model.weights, self.model.biases, self.train_accuracies, self.train_losses, self.val_accuracies, self.val_losses
 
     def nestrov(self, learning_rate, batch_size, epochs, momentum, Xtrain, Ytrain, Xval, Yval):
         momentum_weights = [np.zeros_like(w) for w in self.model.weights]
@@ -172,7 +172,6 @@ class Optimizers:
             self.val_accuracies.append(val_acc)
             self.val_losses.append(val_loss)
 
-        return self.model.weights, self.model.biases, self.train_accuracies, self.train_losses, self.val_accuracies, self.val_losses
 
 
     def rmsprop(self, learning_rate, batch_size, epochs, beta, epsilon, Xtrain, Ytrain, Xval, Yval):
@@ -231,7 +230,6 @@ class Optimizers:
             self.val_accuracies.append(val_acc)
             self.val_losses.append(val_loss)
 
-        return self.model.weights, self.model.biases, self.train_accuracies, self.train_losses, self.val_accuracies, self.val_losses
 
     def adam(self, learning_rate, batch_size, epochs, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval):
         m_w = [np.zeros_like(w) for w in self.model.weights]
@@ -294,7 +292,6 @@ class Optimizers:
             self.val_accuracies.append(val_acc)
             self.val_losses.append(val_loss)
 
-        return self.model.weights, self.model.biases, self.train_accuracies, self.train_losses, self.val_accuracies, self.val_losses
 
     def nadam(self, learning_rate, batch_size, epochs, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval):
         m_w = [np.zeros_like(w) for w in self.model.weights]
@@ -359,7 +356,22 @@ class Optimizers:
             self.val_accuracies.append(val_acc)
             self.val_losses.append(val_loss)
 
-        return self.model.weights, self.model.biases, self.train_accuracies, self.train_losses, self.val_accuracies, self.val_losses
+
+    def train_model(self,optimizer, learning_rate, batch_size, epochs, momentum, beta, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval):
+        if optimizer == "sgd":
+            self.sgd( learning_rate, batch_size, epochs, Xtrain, Ytrain, Xval, Yval)
+        elif optimizer == "momentum":
+             self.momentum_sgd(learning_rate, batch_size, epochs, momentum, Xtrain, Ytrain, Xval, Yval)
+        elif optimizer == "nag":
+             self.nestrov(learning_rate, batch_size, epochs, momentum, Xtrain, Ytrain, Xval, Yval)
+        elif optimizer == "rmsprop":
+            self.rmsprop(learning_rate, batch_size, epochs, beta, epsilon, Xtrain, Ytrain, Xval, Yval)
+        elif optimizer == "adam":
+           self.adam(learning_rate, batch_size, epochs, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval)
+        elif optimizer == "nadam":
+          self.nadam(learning_rate, batch_size, epochs, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval)
+
+        return self.model.weights,self.model.biases, self.train_accuracies,self.train_losses, self.val_accuracies,self.val_losses
 
 
 
