@@ -44,7 +44,7 @@ project_name = "DA6401-Assignment-1"
 
 
 sweep_configuration = {
-    'name' : 'hyper_parameters',
+    'name' : 'hyper_parameters_test',
     'method' : 'bayes',
     'metric': {'name' : 'val_loss', 'goal' : 'minimize'},
     'parameters' : {
@@ -53,7 +53,7 @@ sweep_configuration = {
         'hidden_size': { "values" : [32, 64, 128] },
         'weight_decay': { "values" : [0, 0.0005, 0.5] },
         'learning_rate': { "values" : [1e-3, 1e-4] },
-        'optimizer' : { "values" : ["sgd", "momentum", "nag", "rmsprop", "adam", "nadam"] },
+        'optimizer' : { "values" : ["sgd", "momentum", "nestrov", "rmsprop", "adam"] },
         'batch_size' : { "values" : [16, 32, 64] },
         'weight_init' : { "values" : ["random", "Xavier"] },
         'activation' : { "values" : ["sigmoid", "tanh", "ReLU"] }
@@ -72,7 +72,7 @@ def wandb_connect():
         config.epochs, config.num_layers, config.hidden_size, config.learning_rate, config.optimizer, config.batch_size, config.weight_init, config.activation, config.weight_decay)
 
         # proceed with the run
-        model = FeedforwardNeuralNetwork(input_size,config['hidden_size'],output_size,config['num_layers'],config['learning_rate'],config['weight_init'],config['activation'],loss,config['weight_decay'])
+        model = FeedforwardNeuralNetwork(input_size,config['hidden_size'],output_size,config['num_layers'],config['weight_init'],config['activation'],loss,config['weight_decay'])
         optimizer_call = Optimizers(model)
         model.weights, model.bias, train_acc, train_loss, val_acc, val_loss = optimizer_call.train_model(config['optimizer'], config['learning_rate'], config['batch_size'],config['epochs'], momentum, beta, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval)
         for epoch in range(config['epochs']):

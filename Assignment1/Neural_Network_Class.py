@@ -4,17 +4,15 @@
 import numpy as np
 
 class FeedforwardNeuralNetwork:
-    def __init__(self, input_nodes, hidden_nodes, output_nodes, hidden_layers, learning_rate, weight_init_type, activation,loss_function_name, weight_decay):
+    def __init__(self, input_nodes, hidden_nodes, output_nodes, hidden_layers, weight_init_type, activation, loss_function_name, weight_decay):
         self.input_nodes = input_nodes
         self.hidden_nodes = hidden_nodes
         self.output_nodes = output_nodes
         self.hidden_layers = hidden_layers
-        self.learning_rate = learning_rate
         self.activation = activation.lower()
         self.loss_function_name = loss_function_name.lower()
         self.weight_init_type = weight_init_type.lower()
         self.weight_decay = weight_decay
-        
 
         # Initialize Weights
         self.weights = [np.zeros((hidden_nodes, input_nodes))]
@@ -60,14 +58,15 @@ class FeedforwardNeuralNetwork:
     #Forward
     def forwardpropagation(self, input_data):
         A = input_data
-        Activation_layer = [input_data]
-        Pre_activation_layer = [input_data]
+        Activation_layer = [input_data]  #output of activation function "h"
+        Pre_activation_layer = [] #weighted sum + bias "a"
         for W, B in zip(self.weights[:-1], self.biases[:-1]):  # Hidden layers
             Z = np.dot(A, W.T) + B
             Pre_activation_layer.append(Z)
             A = self.activate_layer(Z)
             Activation_layer.append(A)
         Z_output = np.dot(A, self.weights[-1].T) + self.biases[-1]
+        Pre_activation_layer.append(Z_output)
         A_output = self.softmax(Z_output)
         return A_output, Activation_layer, Pre_activation_layer
 
@@ -81,16 +80,17 @@ class FeedforwardNeuralNetwork:
         layer=self.hidden_layers
         # Gradient for Output Layer
         if self.loss_function_name == "mean_squared_error":
-            gradient_output_layer =np.matmul(self.grad_mse_loss(y_predicted, estimated_y), self.grad_softmax(y_predicted))
-        elif self.loss_function_name == "cross_entropy": 
+            gradient_output_layer = self.gradient_softmax(y_predicted) * self.gradient_mse_loss(y_predicted, estimated_y)
+        elif self.loss_function_name == "cross_entropy":
             gradient_output_layer = -(estimated_y - y_predicted)
 
-        gradient_activation = gradient_output_layer
+        gradient_preactivation = gradient_output_layer
 
+        #Activation -"h" , Preactivation- "a"
         while(layer>-1):
-            #Current layer gradient w.r.t weights are outer product of gradient of activation and Activation value
-            gradient_Weight_cur_layer = np.outer(gradient_activation, Activation_layer[layer])
-            gradient_biases_cur_layer = gradient_activation
+            #Current layer gradient w.r.t weights are outer product of gradient of preactivation and Activation value
+            gradient_Weight_cur_layer = np.outer(gradient_preactivation, Activation_layer[layer])
+            gradient_biases_cur_layer = gradient_preactivation
 
             gradient_Weights.append(gradient_Weight_cur_layer)
             gradient_biases.append(gradient_biases_cur_layer)
@@ -98,15 +98,16 @@ class FeedforwardNeuralNetwork:
             if layer == 0:
                 break
             else:
-                #Gradient of preactivation is dot product of weight matric and consecutive layer's gradient_activation
-                gradient_preactivation = np.dot(gradient_activation, self.weights[layer])
-                gradient_activation = gradient_preactivation * self.gradient_activate(Pre_activation_layer[layer])
+                #Gradient of preactivation is dot product of weight matric and consecutive layer's gradient_preactivation
+                gradient_activation = np.dot(gradient_preactivation, self.weights[layer])
+                gradient_preactivation = gradient_activation * self.gradient_activate(Pre_activation_layer[layer-1]) #element wise multiplication
 
             layer-=1
 
         gradient_Weights.reverse()
         gradient_biases.reverse()
         return gradient_Weights, gradient_biases
+
 
     def gradient_activate(self, x):
         if self.activation == "sigmoid":
@@ -134,14 +135,15 @@ class FeedforwardNeuralNetwork:
     def predict(self, x):
         y_predicted, _, _ = self.forwardpropagation(x.reshape(1, -1))
         return np.argmax(y_predicted, axis=1)[0]
-    
+
     def gradient_mse_loss(self, y_pred, y_actual):
         return 2 * (y_pred - y_actual) / y_actual.shape[0]
 
-    def gradient_softmax(self, y_pred):
-        return y_pred * (1 - y_pred)
 
-    def gradient_weight_loss(self): #L2 Regularization
+    def gradient_softmax(self, y_pred):
+       return y_pred * (1 - y_pred)
+
+    def gradient_weight_loss(self):
         gradient_weight = [self.weight_decay*W for W in self.weights]
         gradient_bias = [self.weight_decay*b for b in self.biases]
         return gradient_weight, gradient_bias
@@ -155,6 +157,8 @@ class FeedforwardNeuralNetwork:
             return np.mean((y_predicted - estimated_y) ** 2)
         elif self.loss_function_name == "cross_entropy":
             return -np.log(y_predicted[0][y_actual])
+
+
 
 
     
