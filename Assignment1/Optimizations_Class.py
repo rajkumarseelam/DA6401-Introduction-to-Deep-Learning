@@ -14,96 +14,105 @@ class Optimizers:
 
     def sgd(self, learning_rate, batch_size, epochs, Xtrain, Ytrain, Xval, Yval):
         for epoch in range(epochs):
-            gradient_Weights = [np.zeros_like(w) for w in self.model.weights]
-            gradient_biases = [np.zeros_like(bias) for bias in self.model.biases]
-
+            # Shuffle training data
             indices = np.arange(len(Xtrain))
             np.random.shuffle(indices)
+            Xtrain_shuffled = Xtrain[indices]
+            Ytrain_shuffled = Ytrain[indices]
 
-            
-            for i in range(len(Xtrain)):
- 
-                y_predicted,Activation_layer, Pre_activation = self.model.forwardpropagation(Xtrain[indices[i]])
-                propagated_Weights, Propagated_biases = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Ytrain[indices[i]])
-                for j in range(len(propagated_Weights)):
-                    gradient_Weights[j] += propagated_Weights[j]
-                    gradient_biases[j] += Propagated_biases[j]
-                    
-                # Performing update when batch is completed
-                if (i + 1) % batch_size == 0 or i == len(Xtrain) - 1:
+            # Mini-batch
+            for i in range(0, len(Xtrain), batch_size):
 
-                    #L2 Regularization
-                    self.model.weights_loss, self.model.biases_loss = self.model.gradient_weight_loss()
+                X_batch = Xtrain_shuffled[i:i + batch_size]
+                Y_batch = Ytrain_shuffled[i:i + batch_size]
 
-                    gradient_Weights/=batch_size
-                    gradient_biases/=batch_size
 
-                    for j in range(len(gradient_Weights)):
-                        self.model.weights[j] -= learning_rate * (gradient_Weights[j] + self.model.weights_loss[j])
-                        self.model.biases[j] -= learning_rate * (gradient_biases[j] + self.model.biases_loss[j])
+                gradient_weights = [np.zeros_like(w) for w in self.model.weights]
+                gradient_biases = [np.zeros_like(b) for b in self.model.biases]
 
-                    #Reset gradients
-                    gradient_Weights = [np.zeros_like(w) for w in gradient_Weights]
-                    gradient_biases = [np.zeros_like(bias) for bias in gradient_biases]
+
+                for j in range(len(X_batch)):
+                    # Forward propagation
+                    y_predicted, Activation_layer, Pre_activation = self.model.forwardpropagation(X_batch[j].reshape(1, -1))
+                    # Backward propagation
+                    propagated_Weights, propagated_biases = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
+
+                    # Accumulate gradients
+                    model_weights_loss, model_biases_loss = self.model.gradient_weight_loss()
+                    for k in range(len(propagated_Weights)):
+                        gradient_weights[k] += propagated_Weights[k]+model_weights_loss[k]
+                        gradient_biases[k] += propagated_biases[k]+model_biases_loss[k]
+
+                for k in range(len(self.model.weights)):
+                    # Update velocity for weights and biases
+                    gradient_weights[k] /= len(X_batch)
+                    gradient_biases[k] /= len(X_batch)
+
+                    self.model.weights[k] -= learning_rate * gradient_weights[k]
+                    self.model.biases[k] -= learning_rate * gradient_biases[k]
+
 
             train_acc, train_loss = self.model.evaluate_metrics(Xtrain, Ytrain)
             val_acc, val_loss = self.model.evaluate_metrics(Xval, Yval)
 
-            print(f"Epoch {epoch + 1}: Train Acc = {train_acc}, Val Acc = {val_acc}")
+            print(f"Epoch {epoch + 1}: Train Acc = {train_acc:.4f}, Train Loss = {train_loss:.4f}, Val Acc = {val_acc:.4f}, Val Loss = {val_loss:.4f}")
+
 
             self.train_accuracies.append(train_acc)
             self.train_losses.append(train_loss)
             self.val_accuracies.append(val_acc)
             self.val_losses.append(val_loss)
 
-
     def momentum_sgd(self, learning_rate, batch_size, epochs, momentum, Xtrain, Ytrain, Xval, Yval):
         momentum_weights = [np.zeros_like(w) for w in self.model.weights]
         momentum_biases = [np.zeros_like(b) for b in self.model.biases]
 
         for epoch in range(epochs):
+            # Shuffle training data
             indices = np.arange(len(Xtrain))
             np.random.shuffle(indices)
+            Xtrain_shuffled = Xtrain[indices]
+            Ytrain_shuffled = Ytrain[indices]
 
-            gradient_Weights = [np.zeros_like(w) for w in self.model.weights]
-            gradient_biases = [np.zeros_like(b) for b in self.model.biases]
+            # Mini-batch
+            for i in range(0, len(Xtrain), batch_size):
 
-            for i in range(len(Xtrain)):  
-                index = indices[i]
+                X_batch = Xtrain_shuffled[i:i + batch_size]
+                Y_batch = Ytrain_shuffled[i:i + batch_size]
 
-                y_predicted, Activation_layer, Pre_activation = self.model.forwardpropagation(Xtrain[index])
-                propagated_Weights, Propagated_biases = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Ytrain[index])
 
-                for j in range(len(propagated_Weights)):
-                    gradient_Weights[j] += propagated_Weights[j]
-                    gradient_biases[j] += Propagated_biases[j]
+                gradient_weights = [np.zeros_like(w) for w in self.model.weights]
+                gradient_biases = [np.zeros_like(b) for b in self.model.biases]
 
-                # Performing update when batch is completed
-                if (i + 1) % batch_size == 0 or i == len(Xtrain) - 1:
-                    # L2 regularization
-                    Model_weights_loss, Model_biases_loss = self.model.gradient_weight_loss()
 
-                    for j in range(len(gradient_Weights)):
-                        gradient_Weights[j] /= batch_size
-                        gradient_biases[j] /= batch_size
+                for j in range(len(X_batch)):
+                    # Forward propagation
+                    y_predicted, Activation_layer, Pre_activation = self.model.forwardpropagation(X_batch[j].reshape(1, -1))
+                    # Backward propagation
+                    propagated_Weights, propagated_biases = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
 
-                        # Momentum Updates
-                        momentum_weights[j] = momentum * momentum_weights[j] + (gradient_Weights[j] + Model_weights_loss[j])
-                        momentum_biases[j] = momentum * momentum_biases[j] + (gradient_biases[j] + Model_biases_loss[j])
+                    # Accumulate gradients
+                    model_weights_loss, model_biases_loss = self.model.gradient_weight_loss()
+                    for k in range(len(propagated_Weights)):
+                        gradient_weights[k] += propagated_Weights[k]+model_weights_loss[k]
+                        gradient_biases[k] += propagated_biases[k]+model_biases_loss[k]
 
-                        # Storing back
-                        self.model.weights[j] -= learning_rate * momentum_weights[j]
-                        self.model.biases[j] -= learning_rate * momentum_biases[j]
+                for k in range(len(self.model.weights)):
+                    # Update velocity for weights and biases
+                    gradient_weights[k] /= len(X_batch)
+                    gradient_biases[k] /= len(X_batch)
 
-                    # Reset gradients
-                    gradient_Weights = [np.zeros_like(w) for w in self.model.weights]
-                    gradient_biases = [np.zeros_like(b) for b in self.model.biases]
+                    momentum_weights[k] = momentum * momentum_weights[k] + learning_rate*gradient_weights[k]
+                    momentum_biases[k] = momentum * momentum_biases[k] + learning_rate*gradient_biases[k]
 
-            
+                    self.model.weights[k] -=momentum_weights[k]
+                    self.model.biases[k] -= momentum_biases[k]
+
+
             train_acc, train_loss = self.model.evaluate_metrics(Xtrain, Ytrain)
             val_acc, val_loss = self.model.evaluate_metrics(Xval, Yval)
 
-            print(f"Epoch {epoch + 1}: Train Acc = {train_acc:.4f}, Val Acc = {val_acc:.4f}")
+            print(f"Epoch {epoch + 1}: Train Acc = {train_acc:.4f}, Train Loss = {train_loss:.4f}, Val Acc = {val_acc:.4f}, Val Loss = {val_loss:.4f}")
 
 
             self.train_accuracies.append(train_acc)
@@ -125,48 +134,57 @@ class Optimizers:
 
             # Mini-batch
             for i in range(0, len(Xtrain), batch_size):
-                
+
                 X_batch = Xtrain_shuffled[i:i + batch_size]
                 Y_batch = Ytrain_shuffled[i:i + batch_size]
 
-                
+                lookahead_weights = [w - momentum * mw for w, mw in zip(self.model.weights, momentum_weights)]
+                lookahead_biases = [b - momentum * mb for b, mb in zip(self.model.biases, momentum_biases)]
+
+                original_weights = [w.copy() for w in self.model.weights]
+                original_biases = [b.copy() for b in self.model.biases]
+                self.model.weights = lookahead_weights
+                self.model.biases = lookahead_biases
+
+                # Compute gradients at the lookahead position
                 gradient_weights = [np.zeros_like(w) for w in self.model.weights]
                 gradient_biases = [np.zeros_like(b) for b in self.model.biases]
 
-                
                 for j in range(len(X_batch)):
-                    # Forward propagation
+                    # Forward propagation using lookahead weights
                     y_predicted, Activation_layer, Pre_activation = self.model.forwardpropagation(X_batch[j].reshape(1, -1))
+
                     # Backward propagation
-                    grad_W, grad_B = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
+                    propagated_Weights, propagated_biases = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
 
-                    # Accumulate gradients
-                    for k in range(len(grad_W)):
-                        gradient_weights[k] += grad_W[k]
-                        gradient_biases[k] += grad_B[k]
+                    model_weights_loss, model_biases_loss = self.model.gradient_weight_loss()
 
-                # Average gradients over the batch
-                for k in range(len(gradient_weights)):
+                    for k in range(len(propagated_Weights)):
+                        gradient_weights[k] += propagated_Weights[k] + model_weights_loss[k]
+                        gradient_biases[k] += propagated_biases[k] + model_biases_loss[k]
+
+                #Restoring the values
+                self.model.weights = original_weights
+                self.model.biases = original_biases
+
+                for k in range(len(self.model.weights)):
                     gradient_weights[k] /= len(X_batch)
                     gradient_biases[k] /= len(X_batch)
 
-                # Update weights and biases using NAG
-                for i in range(len(self.model.weights)):
-                    # Update velocity for weights and biases
-                    momentum_weights[i] = momentum * momentum_weights[i] + gradient_weights[i]
-                    momentum_biases[i] = momentum * momentum_biases[i] + gradient_biases[i]
-                    
-                    
-                    self.model.weights[i] -= learning_rate * (momentum * momentum_weights[i] + gradient_weights[i])
-                    self.model.biases[i] -= learning_rate * (momentum * momentum_biases[i] + gradient_biases[i])
+                    # prev_momentum_weights = momentum_weights[k]
+                    # prev_momentum_biases = momentum_biases[k]
 
-            
+                    momentum_weights[k] = momentum * momentum_weights[k] + learning_rate * gradient_weights[k]
+                    momentum_biases[k] = momentum * momentum_biases[k] +learning_rate * gradient_biases[k]
+
+                    self.model.weights[k] -= momentum_weights[k]
+                    self.model.biases[k] -= momentum_biases[k]
+
             train_acc, train_loss = self.model.evaluate_metrics(Xtrain, Ytrain)
             val_acc, val_loss = self.model.evaluate_metrics(Xval, Yval)
 
             print(f"Epoch {epoch + 1}: Train Acc = {train_acc:.4f}, Train Loss = {train_loss:.4f}, Val Acc = {val_acc:.4f}, Val Loss = {val_loss:.4f}")
 
-            
             self.train_accuracies.append(train_acc)
             self.train_losses.append(train_loss)
             self.val_accuracies.append(val_acc)
@@ -174,13 +192,14 @@ class Optimizers:
 
 
 
+
     def rmsprop(self, learning_rate, batch_size, epochs, beta, epsilon, Xtrain, Ytrain, Xval, Yval):
-        
-        local_weights = [np.zeros_like(w) for w in self.model.weights]
-        local_biases = [np.zeros_like(b) for b in self.model.biases]
+
+        v_weights = [np.zeros_like(w) for w in self.model.weights]
+        v_biases = [np.zeros_like(b) for b in self.model.biases]
 
         for epoch in range(epochs):
-            
+
             indices = np.arange(len(Xtrain))
             np.random.shuffle(indices)
             Xtrain_shuffled = Xtrain[indices]
@@ -191,40 +210,40 @@ class Optimizers:
                 X_batch = Xtrain_shuffled[i:i + batch_size]
                 Y_batch = Ytrain_shuffled[i:i + batch_size]
 
-               
+
                 gradient_weights = [np.zeros_like(w) for w in self.model.weights]
                 gradient_biases = [np.zeros_like(b) for b in self.model.biases]
 
-               
+
                 for j in range(len(X_batch)):
                     # Forward propagation
                     y_predicted, Activation_layer, Pre_activation = self.model.forwardpropagation(X_batch[j].reshape(1, -1))
                     # Backward propagation
-                    grad_W, grad_B = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
+                    propagated_Weights, propagated_biases = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
 
-                    
-                    for k in range(len(grad_W)):
-                        gradient_weights[k] += grad_W[k]
-                        gradient_biases[k] += grad_B[k]
 
-               
-                for k in range(len(gradient_weights)):
+                    model_weights_loss, model_biases_loss = self.model.gradient_weight_loss()
+                    for k in range(len(propagated_Weights)):
+                        gradient_weights[k] += propagated_Weights[k]+model_weights_loss[k]
+                        gradient_biases[k] += propagated_biases[k]+model_biases_loss[k]
+
+
+                for k in range(len(self.model.weights)):
                     gradient_weights[k] /= len(X_batch)
                     gradient_biases[k] /= len(X_batch)
 
-                
-                for k in range(len(self.model.weights)):
-                    local_weights[k] = beta * local_weights[k] + (1 - beta) * (gradient_weights[k] ** 2)
-                    local_biases[k] = beta * local_biases[k] + (1 - beta) * (gradient_biases[k] ** 2)
-                    self.model.weights[k] -= learning_rate * gradient_weights[k] / (np.sqrt(local_weights[k]) + epsilon)
-                    self.model.biases[k] -= learning_rate * gradient_biases[k] / (np.sqrt(local_biases[k]) + epsilon)
+                    v_weights[k] = beta * v_weights[k] + (1 - beta) * (gradient_weights[k] ** 2)
+                    v_biases[k] = beta * v_biases[k] + (1 - beta) * (gradient_biases[k] ** 2)
+
+                    self.model.weights[k] -= learning_rate * gradient_weights[k] / (np.sqrt(v_weights[k]) + epsilon)
+                    self.model.biases[k] -= learning_rate * gradient_biases[k] / (np.sqrt(v_biases[k]) + epsilon)
 
             train_acc, train_loss = self.model.evaluate_metrics(Xtrain, Ytrain)
             val_acc, val_loss = self.model.evaluate_metrics(Xval, Yval)
 
             print(f"Epoch {epoch + 1}: Train Acc = {train_acc:.4f}, Train Loss = {train_loss:.4f}, Val Acc = {val_acc:.4f}, Val Loss = {val_loss:.4f}")
 
-           
+
             self.train_accuracies.append(train_acc)
             self.train_losses.append(train_loss)
             self.val_accuracies.append(val_acc)
@@ -232,10 +251,10 @@ class Optimizers:
 
 
     def adam(self, learning_rate, batch_size, epochs, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval):
-        m_w = [np.zeros_like(w) for w in self.model.weights]
-        m_b = [np.zeros_like(b) for b in self.model.biases]
-        v_w = [np.zeros_like(w) for w in self.model.weights]
-        v_b = [np.zeros_like(b) for b in self.model.biases]
+        m_weights = [np.zeros_like(w) for w in self.model.weights]
+        m_biases = [np.zeros_like(b) for b in self.model.biases]
+        v_weights = [np.zeros_like(w) for w in self.model.weights]
+        v_biases = [np.zeros_like(b) for b in self.model.biases]
 
         for epoch in range(epochs):
             indices = np.arange(len(Xtrain))
@@ -254,33 +273,33 @@ class Optimizers:
                     # Forward propagation
                     y_predicted, Activation_layer, Pre_activation = self.model.forwardpropagation(X_batch[j].reshape(1, -1))
                     # Backward propagation
-                    grad_W, grad_B = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
+                    propagated_Weights, propagated_biases = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
 
 
-                    for k in range(len(grad_W)):
-                        gradient_weights[k] += grad_W[k]
-                        gradient_biases[k] += grad_B[k]
-
-                for k in range(len(gradient_weights)):
-                    gradient_weights[k] /= len(X_batch)
-                    gradient_biases[k] /= len(X_batch)
+                    model_weights_loss, model_biases_loss = self.model.gradient_weight_loss()
+                    for k in range(len(propagated_Weights)):
+                        gradient_weights[k] += propagated_Weights[k]+model_weights_loss[k]
+                        gradient_biases[k] += propagated_biases[k]+model_biases_loss[k]
 
 
                 for k in range(len(self.model.weights)):
-                    m_w[k] = beta1 * m_w[k] + (1 - beta1) * gradient_weights[k]
-                    m_b[k] = beta1 * m_b[k] + (1 - beta1) * gradient_biases[k]
-                    v_w[k] = beta2 * v_w[k] + (1 - beta2) * (gradient_weights[k] ** 2)
-                    v_b[k] = beta2 * v_b[k] + (1 - beta2) * (gradient_biases[k] ** 2)
+                    gradient_weights[k] /= len(X_batch)
+                    gradient_biases[k] /= len(X_batch)
+
+                    m_weights[k] = beta1 * m_weights[k] + (1 - beta1) * gradient_weights[k]
+                    m_biases[k] = beta1 * m_biases[k] + (1 - beta1) * gradient_biases[k]
+                    v_weights[k] = beta2 * v_weights[k] + (1 - beta2) * (gradient_weights[k] ** 2)
+                    v_biases[k] = beta2 * v_biases[k] + (1 - beta2) * (gradient_biases[k] ** 2)
 
                     # Bias correction
-                    m_w_hat = m_w[k] / (1 - beta1 ** (epoch + 1))
-                    m_b_hat = m_b[k] / (1 - beta1 ** (epoch + 1))
-                    v_w_hat = v_w[k] / (1 - beta2 ** (epoch + 1))
-                    v_b_hat = v_b[k] / (1 - beta2 ** (epoch + 1))
+                    m_weights_hat = m_weights[k] / (1 - beta1 ** (epoch + 1))
+                    m_biases_hat = m_biases[k] / (1 - beta1 ** (epoch + 1))
+                    v_weights_hat = v_weights[k] / (1 - beta2 ** (epoch + 1))
+                    v_biases_hat = v_biases[k] / (1 - beta2 ** (epoch + 1))
 
                     # Update weights and biases
-                    self.model.weights[k] -= learning_rate * m_w_hat / (np.sqrt(v_w_hat) + epsilon)
-                    self.model.biases[k] -= learning_rate * m_b_hat / (np.sqrt(v_b_hat) + epsilon)
+                    self.model.weights[k] -= learning_rate * m_weights_hat / (np.sqrt(v_weights_hat) + epsilon)
+                    self.model.biases[k] -= learning_rate * m_biases_hat / (np.sqrt(v_biases_hat) + epsilon)
 
             train_acc, train_loss = self.model.evaluate_metrics(Xtrain, Ytrain)
             val_acc, val_loss = self.model.evaluate_metrics(Xval, Yval)
@@ -292,69 +311,8 @@ class Optimizers:
             self.val_accuracies.append(val_acc)
             self.val_losses.append(val_loss)
 
+   
 
-    def nadam(self, learning_rate, batch_size, epochs, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval):
-        m_w = [np.zeros_like(w) for w in self.model.weights]
-        m_b = [np.zeros_like(b) for b in self.model.biases]
-        v_w = [np.zeros_like(w) for w in self.model.weights]
-        v_b = [np.zeros_like(b) for b in self.model.biases]
-
-        for epoch in range(epochs):
-            indices = np.arange(len(Xtrain))
-            np.random.shuffle(indices)
-            Xtrain_shuffled = Xtrain[indices]
-            Ytrain_shuffled = Ytrain[indices]
-
-            for i in range(0, len(Xtrain), batch_size):
-                X_batch = Xtrain_shuffled[i:i + batch_size]
-                Y_batch = Ytrain_shuffled[i:i + batch_size]
-
-                gradient_weights = [np.zeros_like(w) for w in self.model.weights]
-                gradient_biases = [np.zeros_like(b) for b in self.model.biases]
-
-                for j in range(len(X_batch)):
-                    # Forward propagation
-                    y_predicted, Activation_layer, Pre_activation = self.model.forwardpropagation(X_batch[j].reshape(1, -1))
-                    # Backward propagation
-                    grad_W, grad_B = self.model.back_propagation(Activation_layer, Pre_activation, y_predicted, Y_batch[j])
-
-                    for k in range(len(grad_W)):
-                        gradient_weights[k] += grad_W[k]
-                        gradient_biases[k] += grad_B[k]
-
-                for k in range(len(gradient_weights)):
-                    gradient_weights[k] /= len(X_batch)
-                    gradient_biases[k] /= len(X_batch)
-
-                for k in range(len(self.model.weights)):
-                    m_w[k] = beta1 * m_w[k] + (1 - beta1) * gradient_weights[k]
-                    m_b[k] = beta1 * m_b[k] + (1 - beta1) * gradient_biases[k]
-                    v_w[k] = beta2 * v_w[k] + (1 - beta2) * (gradient_weights[k] ** 2)
-                    v_b[k] = beta2 * v_b[k] + (1 - beta2) * (gradient_biases[k] ** 2)
-
-                    # Bias correction
-                    m_w_hat = m_w[k] / (1 - beta1 ** (epoch + 1))
-                    m_b_hat = m_b[k] / (1 - beta1 ** (epoch + 1))
-                    v_w_hat = v_w[k] / (1 - beta2 ** (epoch + 1))
-                    v_b_hat = v_b[k] / (1 - beta2 ** (epoch + 1))
-
-                    # Nesterov momentum
-                    m_w_hat_nadam = beta1 * m_w_hat + (1 - beta1) * gradient_weights[k]
-                    m_b_hat_nadam = beta1 * m_b_hat + (1 - beta1) * gradient_biases[k]
-
-                    # Update weights and biases
-                    self.model.weights[k] -= learning_rate * m_w_hat_nadam / (np.sqrt(v_w_hat) + epsilon)
-                    self.model.biases[k] -= learning_rate * m_b_hat_nadam / (np.sqrt(v_b_hat) + epsilon)
-
-            train_acc, train_loss = self.model.evaluate_metrics(Xtrain, Ytrain)
-            val_acc, val_loss = self.model.evaluate_metrics(Xval, Yval)
-
-            print(f"Epoch {epoch + 1}: Train Acc = {train_acc:.4f}, Train Loss = {train_loss:.4f}, Val Acc = {val_acc:.4f}, Val Loss = {val_loss:.4f}")
-
-            self.train_accuracies.append(train_acc)
-            self.train_losses.append(train_loss)
-            self.val_accuracies.append(val_acc)
-            self.val_losses.append(val_loss)
 
 
     def train_model(self,optimizer, learning_rate, batch_size, epochs, momentum, beta, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval):
@@ -362,16 +320,15 @@ class Optimizers:
             self.sgd( learning_rate, batch_size, epochs, Xtrain, Ytrain, Xval, Yval)
         elif optimizer == "momentum":
              self.momentum_sgd(learning_rate, batch_size, epochs, momentum, Xtrain, Ytrain, Xval, Yval)
-        elif optimizer == "nag":
+        elif optimizer == "nestrov":
              self.nestrov(learning_rate, batch_size, epochs, momentum, Xtrain, Ytrain, Xval, Yval)
         elif optimizer == "rmsprop":
             self.rmsprop(learning_rate, batch_size, epochs, beta, epsilon, Xtrain, Ytrain, Xval, Yval)
         elif optimizer == "adam":
            self.adam(learning_rate, batch_size, epochs, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval)
-        elif optimizer == "nadam":
-          self.nadam(learning_rate, batch_size, epochs, beta1, beta2, epsilon, Xtrain, Ytrain, Xval, Yval)
 
         return self.model.weights,self.model.biases, self.train_accuracies,self.train_losses, self.val_accuracies,self.val_losses
+
 
 
 
