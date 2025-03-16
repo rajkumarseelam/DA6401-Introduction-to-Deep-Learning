@@ -2,6 +2,9 @@
 #This class contains all the functions for implementation the Feed Forward Neural network..
 
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import wandb
 
 class FeedforwardNeuralNetwork:
     def __init__(self, input_nodes, hidden_nodes, output_nodes, hidden_layers, weight_init_type, activation, loss_function_name, weight_decay):
@@ -158,7 +161,39 @@ class FeedforwardNeuralNetwork:
         elif self.loss_function_name == "cross_entropy":
             return -np.log(y_predicted[0][y_actual])
 
+    def confusion_matrix(self, X, Y,dataset,plot=True):
+        class_names=[]
+        if dataset == "fashion_mnist":
+            class_names = ["T-shirt/Top", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle Boot"]
+        else:
+            class_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
+        confusion_matrix = np.zeros((self.output_nodes, self.output_nodes), dtype=int)
+
+        for i in range(len(X)):
+            y_predicted, _, _ = self.forwardpropagation(X[i].reshape(1, -1))
+            predicted_class = np.argmax(y_predicted, axis=1)[0]
+            confusion_matrix[predicted_class, Y[i]] += 1
+
+        if plot:
+            plt.figure(figsize=(10, 7))
+            sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap="Greens", xticklabels=class_names, yticklabels=class_names)
+            plt.xlabel("Actual Label")
+            plt.ylabel("Predicted Label")
+            plt.title("Confusion Matrix")
+            plt.show()
+        else:
+            plt.figure(figsize=(10, 7))
+            sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap="Greens", xticklabels=class_names, yticklabels=class_names)
+            plt.xlabel("Actual Label")
+            plt.ylabel("Predicted Label")
+            plt.title("Confusion Matrix")
+            Img_name="confusion_matrix.png"
+            plt.savefig(Img_name)
+            plt.close()
+            wandb.log({"confusion_matrix": wandb.Image(Img_name)})
+
+        return confusion_matrix
 
 
     
