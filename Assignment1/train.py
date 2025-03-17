@@ -561,7 +561,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     wandb.login()
-    wandb.init(project=args.wandb_project)
+    run_name="epochs {} hidden_layers {} hidden_size {} learning_rate {} opt {} batch_size {} init {} activation {} weight_decay {}".format(
+        args.epochs, args.num_layers, args.hidden_size, args.learning_rate, args.optimizer, args.batch_size, args.weight_init, args.activation, args.weight_decay)
+    wandb.init(project=args.wandb_project,entity=args.wandb_entity,name=run_name)
     if(args.dataset=="fashion_mnist"):
         (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
     else:
