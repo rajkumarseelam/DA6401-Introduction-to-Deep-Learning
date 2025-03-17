@@ -140,8 +140,7 @@ class FeedforwardNeuralNetwork:
         return np.argmax(y_predicted, axis=1)[0]
 
     def gradient_mse_loss(self, y_pred, y_actual):
-        return 2 * (y_pred - y_actual) / y_actual.shape[0]
-
+        return  (y_pred - y_actual)
 
     def gradient_softmax(self, y_pred):
        return y_pred * (1 - y_pred)
@@ -157,7 +156,7 @@ class FeedforwardNeuralNetwork:
         estimated_y[y_actual] = 1
 
         if self.loss_function_name == "mean_squared_error":
-            return np.mean((y_predicted - estimated_y) ** 2)
+            return 0.5*np.sum((y_predicted - estimated_y) ** 2)
         elif self.loss_function_name == "cross_entropy":
             return -np.log(y_predicted[0][y_actual])
 
